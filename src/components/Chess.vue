@@ -5,8 +5,13 @@
         <canvas @click="click" @mousemove="showCoords" id="chess" ref="chess" style="border: 1px solid black" />
         <div v-if="game != null">
           Current Turn: {{ playerTurn }}
-          <div v-if="game.playerInCheck" style="color: red">
-            Player is in check
+          <div v-if="game.checkMate" style="color: red">
+            Player is in checkmate
+          </div>
+          <div v-else>
+            <div v-if="game.playerInCheck" style="color: red">
+              Player is in check
+            </div>
           </div>
           <div>
             <button v-if="game" @click="game.resetGame()">Reset</button>
@@ -91,6 +96,27 @@ export default {
 
       this.game.click(55)
       this.game.click(4)
+      
+    },
+    runCheckMateTest() {
+      this.game.click(65)
+      this.game.click(66)
+
+      this.game.click(6)
+      this.game.click(5)
+      
+      this.game.click(48)
+      this.game.click(82)
+      
+      this.game.click(5)
+      this.game.click(4)
+      
+      this.game.click(80)
+      this.game.click(35)
+      
+      this.game.click(118)
+      this.game.click(117)
+
       
     },
     runCheckTest() {

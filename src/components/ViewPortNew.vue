@@ -3,7 +3,7 @@
 </template>
 <script>
 import { mapMutations, mapActions } from "vuex";
-import BallDemo3DFlat from './BallDemo3DFlat'
+import BallDemo3D from './BallDemo3D.js'
 
 export default {
   props: {
@@ -54,9 +54,9 @@ export default {
     }
   },
   mounted () {
-    this.game = new BallDemo3DFlat(this.height);
+    this.game = new BallDemo3D(this.height);
     let piece = this.game.pieces;
-    this.$emit('setsize', piece.size)
+    this.$emit('setsize', 80)
     this.INIT({
       width: this.$el.offsetWidth,
       height: this.$el.offsetHeight,
@@ -72,7 +72,10 @@ export default {
       });
     });
   },
+  created() {
+  },
   beforeDestroy() {
+    this.game.stop();
     this.RESET_STATE();
   }
 };

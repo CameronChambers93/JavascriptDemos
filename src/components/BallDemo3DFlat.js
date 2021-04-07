@@ -1,9 +1,8 @@
 import {spatial_grid} from './SpatialHashGrid'
 
 import {math} from './math'
-const CANVAS_ID = 'balldemo';
 let pieces = [0, 0, 0, 0]
-let colors = ["#000000", "#f00", "#00ff10", "#3800ff"];
+
 
 let clock = 0;
 
@@ -18,16 +17,22 @@ class Piece{
 
         this.tags = new Map();
 
+        this.colorNeedsUpdating = false;
+
         this.movement = [0, 1];
         this.head = head;
         this.tail = tail;
 
         this.grid = grid;
-
         this.position = position;
         this.client = grid.NewClient(position, [size, size], this);
         this.client.position = position;
         grid.UpdateClient(this.client);
+    }
+
+    resize(size) {
+        this.size = size;
+        this.client.dimensions = [size, size]
     }
 
     isPieceOverlapping(piece) {
@@ -50,11 +55,14 @@ class Piece{
             [x, y] = direction;
             if (x != 0) { //  Reverse x momentum
                 this.direction[0] *= -1   
+                return true;
             }
             else {    // Reverse y momentum
                 this.direction[1] *= -1
+                return true;
             }
         }
+        return false;
     }
 
     move() {
@@ -101,11 +109,13 @@ class Piece{
         if (unit.color > this.color) {
             pieces[this.color] -= 1;
             this.color += 1;
+            this.colorNeedsUpdating = true;
             pieces[this.color] += 1;
         }
         else if (unit.color < this.color) {
             pieces[this.color] -= 1;
             this.color = Math.min(this.color + 1, 3);
+            this.colorNeedsUpdating = true;
             pieces[this.color] += 1;    
         }
         let direction = this.getDirectionTowardsUnit(unit);
@@ -126,7 +136,6 @@ class Piece{
 
 class Game{
     constructor(width) {
-        this.canvas = document.getElementById(CANVAS_ID)
         this.width = width;
         this.tileWidth = width / 8;
         this.grid = new spatial_grid.SpatialHash_Fast([[0, 0], [width, width]], [25, 25]);
@@ -135,16 +144,11 @@ class Game{
 
         this.pieceSize = 25;
         this.pieces = null;
+        this.lastPiece = null
 
+        this.gameId = 0;
         this.pieceIdCounter = 0;
 
-        for (let i = 0; i < 8; i++) {
-            for (let j = 0; j < 8; j++) {
-                this.grid[(i * 16) + j] = new Set();
-            }
-        }
-
-        this.drawBoard();
         this.initiatePieces(this.pieceAmount);
 
         this.shouldReset = false;
@@ -156,12 +160,8 @@ class Game{
         pieces = [0, 0, 0, 0]
         this.pieces = null;
         this.grid._Reset();
-        for (let i = 0; i < 8; i++) {
-            for (let j = 0; j < 8; j++) {
-                this.grid[(i * 16) + j] = new Set();
-            }
-        }
         this.initiatePieces(this.pieceAmount);
+        this.gameId++;
         this.shouldReset = false;
         this.gameInterval = setInterval(() => {this.gameLoop()}, Math.floor(1000 / tickRate));
     }
@@ -176,8 +176,6 @@ class Game{
             return this.resetGame(tickRate);
         else {
             this.executeMoves();
-            this.drawBoard();
-            this.drawPieces();
         }
     }
 
@@ -188,67 +186,25 @@ class Game{
             piece = piece.tail;
         }
     }
+    
 
-    drawBoard() {
-        /*
-        let tileWidth = this.width / 8;
-        for (let x = 0; x < 8; x++) {
-            for (let y = 0; y < 8; y++) {
-                if ((x + y) % 2 == 1) {     // Tile is black
-                    ctx.fillRect(x*tileWidth, y*tileWidth, tileWidth, tileWidth);
-                }
-            }
-        }
-        */
-       let ctx = this.canvas.getContext('2d');
-       ctx.clearRect(0, 0, this.width, this.width);
-    }
-
-
-
-    drawPieces() {
-        let ctx = this.canvas.getContext('2d');
-        let piece = this.pieces;
-        while (piece) {
-            /*
-            if (piece.color) {
-                let [x, y] = piece.position
-                x += piece.size / 2;
-                y += piece.size / 2;
-                ctx.fillStyle = "#f00"
-                ctx.beginPath();
-                ctx.arc(x, y, piece.sight, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-            */
-           
-            ctx.fillStyle = colors[piece.color];
-            let [x,y] = piece.position
-            let w = piece.size;
-            ctx.beginPath();
-            ctx.arc(x, y, w / 2, 0, 2*Math.PI);
-            ctx.fill();
-            piece = piece.tail;
-        }
-    }
-
-    addPiece(color, sight, size) {
-        let [x, y] = [Math.floor(Math.random() * this.width), Math.floor(Math.random() * this.width)];
+    addPiece(color, size) {
+        let x = Math.floor(Math.random() * this.width);
+        let y = Math.floor(Math.random() * this.width);
         let piece;
         let deg = Math.random() * 2 * Math.PI;
         let direction = [Math.cos(deg), Math.sin(deg)]
-        piece = new Piece(this.pieceIdCounter++, this.grid, size, direction, color, [x, y], sight);
+        piece = new Piece(this.pieceIdCounter++, this.grid, size, direction, color, [x, y]);
         if (this.pieces == null) {
             this.pieces = piece;
+            this.lastPiece = piece;
         }
         else {
             piece.tail = this.pieces;
             this.pieces.head = piece;
             this.pieces = piece;
         }
-
         pieces[color] += 1;
-
         let count = 0;
         while (count < 10) {
             let d;
@@ -289,9 +245,9 @@ class Game{
     }
 
     initiatePieces(pieceAmount) {
-        this.addPiece(1, 100, this.pieceSize);
+        this.addPiece(1, this.pieceSize);
         for (let x = 1; x < pieceAmount; x++) {
-            this.addPiece(0, 100, this.pieceSize);
+            this.addPiece(0, this.pieceSize);
         }
     }
 
@@ -302,8 +258,6 @@ class Game{
         this.tileWidth = width / 8;
         this.canvas.width = width;
         this.canvas.height = width;
-        this.drawBoard();
-        this.drawPieces();
     }
 
     
@@ -321,17 +275,17 @@ class Game{
         this.pieceSize = size;
     }
 
-    addPieceFromClient() {
-        this.addPiece(0, 100, this.pieceSize);
+    addPieceFromClient(size = this.pieceSize) {
+        this.addPiece(0, size);
         this.pieceAmount++;
     }
 
     removePieceFromClient() {
-        if (this.pieces.tail){
-            pieces[this.pieces.color]--;
-            this.grid.Remove(this.pieces.client);
-            this.pieces = this.pieces.tail;
-            this.pieces.head = null;
+        if (this.lastPiece.head){
+            pieces[this.lastPiece.color]--;
+            this.grid.Remove(this.lastPiece.client);
+            this.lastPiece = this.lastPiece.head;
+            this.lastPiece.tail = null
             this.pieceAmount -= 1;
         }
     }

@@ -35,12 +35,20 @@ export const math = (function() {
         return Math.min(Math.max(x, 0.0), 1.0);
       },
 
+      // For a given vector, will return a vector with the same direction and magnitude 1
       normalize: function(coords) {
-        let [x, y] = coords;
-        let c = Math.sqrt(x*x + y*y);
+        let [x, y, z] = coords;
+        let c;
+        if (z)
+          c = Math.sqrt(x*x + y*y + z*z);
+        else
+          c = Math.sqrt(x*x + y*y);
         x /= c;
         y /= c;
-        return [x, y]
+        if (z)
+          return [x, y, z/c]
+        else
+          return [x, y]
       }
     };
   })();

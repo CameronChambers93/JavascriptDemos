@@ -17,7 +17,7 @@
   </div>
 </template>
 <script>
-import ViewPort from './ViewPortNew.vue'
+import ViewPort from './ViewPort.vue'
 import ControlPanel from './ControlPanel.vue'
 
 export default {

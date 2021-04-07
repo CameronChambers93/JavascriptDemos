@@ -54,6 +54,11 @@ export default new Vuex.Store({
   },
   mutations: {
     RESET_STATE(state) {
+      for (const sphere of state.spheres) {
+        state.scene.remove(sphere);
+        delete sphere.geometry;
+        delete sphere.material;
+      }
       Object.assign(state, getDefaultState());
     },
     SET_VIEWPORT_SIZE(state, { width, height }) {
@@ -122,7 +127,7 @@ export default new Vuex.Store({
         });
         var mesh = new Mesh(geometry, material);
         [mesh.position.x, mesh.position.y] = piece.position;
-        mesh.position.z = 12.5;
+        (piece.position.length > 2) ? mesh.position.z = piece.position[2] : mesh.position.z = 12.5;
         mesh.updateMatrix();
         mesh.matrixAutoUpdate = false;
         state.spheres.push(mesh);
@@ -131,7 +136,7 @@ export default new Vuex.Store({
       }
       state.scene.add(...state.spheres);
 
-        console.log(state.pieces)
+        console.log(state.spheres)
       // lights
       var lightA = new DirectionalLight(0xffffff);
       lightA.position.set(1, 1, 1);
@@ -214,7 +219,9 @@ export default new Vuex.Store({
       let colors = [0x000000, 0xf00000, 0x00ff04, 0x005fff, 0xffffff];
       while (piece) {
         let id = piece.sphereIndex;
-        [state.spheres[id].position.x, state.spheres[id].position.y] = piece.position;
+        [state.spheres[id].position.x, state.spheres[id].position.y] = [piece.position[0], piece.position[1]];
+        if (piece.position.length > 2)
+          state.spheres[id].position.z = piece.position[2];
         if (piece.colorNeedsUpdating) {
           state.spheres[id].material = new MeshPhongMaterial({
             color: colors[piece.color],
@@ -250,8 +257,7 @@ export default new Vuex.Store({
           flatShading: true
         });
         var mesh = new Mesh(geometry, material);
-        [mesh.position.x, mesh.position.y] = piece.position;
-        mesh.position.z = 12.5;
+        [mesh.position.x, mesh.position.y, mesh.position.z] = piece.position;
         mesh.updateMatrix();
         mesh.matrixAutoUpdate = false;
         piece.

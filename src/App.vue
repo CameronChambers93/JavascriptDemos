@@ -3,6 +3,7 @@
     <div class="md-layout md-gutter" style="display: flex; flex-wrap: wrap; height: 100%">
       <BallDemo v-if="selection =='BALL_DEMO'" class="md-layout-item md-size-100" />
       <BallDemo3D v-if="selection == 'BALL_DEMO_3D'" class="md-layout-item md-size-100" />
+      <BallDemo3DFlat v-if="selection == '3D_BALL_FLAT'" class="md-layout-item md-size-100" />
       <Chess v-if="selection == 'CHESS'" class="md-layout-item md-size-100" />
       <HashGridTester v-if="selection == 'HASH_GRID_TESTER'" class="md-layout-item md-size-100" />
       <div v-if="selection == 'MENU'" class="md-layout-item md-size-100">
@@ -21,18 +22,19 @@
 <script>
 import Chess from './components/Chess.vue'
 import BallDemo from './components/BallDemo.vue'
+import BallDemo3DFlat from './components/BallDemo3DFlat.vue'
 import BallDemo3D from './components/BallDemo3D.vue'
 import HashGridTester from './components/HashGridTester.vue'
 
 export default {
   name: 'App',
   components: {
-    Chess, BallDemo, BallDemo3D, HashGridTester
+    Chess, BallDemo, BallDemo3DFlat, BallDemo3D, HashGridTester
   },
   data() {
     return {
       selection: 'MENU',
-      pages: ['CHESS', 'BALL_DEMO', 'BALL_DEMO_3D', 'HASH_GRID_TESTER']
+      pages: ['CHESS', 'BALL_DEMO', '3D_BALL_FLAT', 'HASH_GRID_TESTER', 'BALL_DEMO_3D']
     }
   },
   created() {

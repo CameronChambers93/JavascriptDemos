@@ -54,6 +54,7 @@ class Pawn extends Piece {
             this.direction = 1
         }
         this.hasMoved = false;
+        this.isPawn = true;
     }
 
     get movements() {
@@ -83,6 +84,7 @@ class King extends Piece {
             super('black_king', color, index, false);
             this.hasMoved = false;
         }
+        this.isKing = true;
         this.movements = [-1, 1, -16, 16, -17, -15, 15, 17]
     }
 
@@ -127,6 +129,7 @@ class Knight extends Piece {
             super('white_knight', color, index, false);
         else
             super('black_knight', color, index, false);
+        this.isKnight = true;
         this.movements = [18, -18, 33, -33, 14, -14, 31, -31]
     }
 }
@@ -157,6 +160,8 @@ class Game{
         this.tileSelected = -1;
         this.lastMovement = [0, 0]
         this.playerInCheck = false;
+
+        this.checkMate = false;
         this.whiteKing;
         this.blackKing;
         this.drawBoard();
@@ -192,41 +197,66 @@ class Game{
     }
 
     updateCheckStatus() {
-        if (this.isKingInCheck())
+        if (this.isKingInCheck()) {
+            if (this.isPlayerInCheckMate())
+                this.checkMate = true;
             this.playerInCheck = true;
+        }
         else
             this.playerInCheck = false;
     }
 
-    isKingInCheck() {
-        let king;
-        if (this.playerTurn) {    // White player's turn
-            king = this.whiteKing;
+    isPlayerInCheckMate() {
+        for (const piece of Object.values(this.tiles)) {
+            if (piece) {
+                if (piece.color == this.playerTurn) {
+                    this.tileSelected = piece.index;
+                    if (this.getAvailableMovements(piece.index).length) {
+                        this.tileSelected = -1;
+                        return false
+                    }
+                }
+            }
         }
-        else {
-            king = this.blackKing;
-        }
-        let index = king.index;
-        
+        this.tileSelected = -1;
+        return true;
+    }
+
+    inCheckByPawn(index) {
         let lPawnTestIndex = index - 16 + (this.playerTurn ? -1 : 1)
         let rPawnTestIndex = index + 16 + (this.playerTurn ? -1 : 1)
         if (this.tiles[lPawnTestIndex])
             if (this.tiles[lPawnTestIndex].color != this.playerTurn)
-                if (this.tiles[lPawnTestIndex].constructor.name == 'Pawn')
-                    return true
+                if (this.tiles[lPawnTestIndex].isPawn)
+                    return true;
         if (this.tiles[rPawnTestIndex])
             if (this.tiles[rPawnTestIndex].color != this.playerTurn)
-                if (this.tiles[rPawnTestIndex].constructor.name == 'Pawn')
-                    return true
+                if (this.tiles[rPawnTestIndex].isPawn)
+                    return true;
+    }
+
+    inCheckByKnight(index) {
         let knightMovements = [18, -18, 33, -33, 14, -14, 31, -31];
         for (const move of knightMovements) {
             if (this.tiles[index + move]) {
                 if (this.tiles[index + move].color != this.playerTurn)
-                    if (this.tiles[index + move].constructor.name == 'Knight') {
+                    if (this.tiles[index + move].isKnight) {
                         return true
                     }
             }
         }
+    }
+
+    isKingInCheck() {
+        let king;
+        (this.playerTurn) ? king = this.whiteKing : king = this.blackKing;
+        let index = king.index;
+        
+        if (this.inCheckByPawn(index))
+            return true;
+        if (this.inCheckByKnight(index))
+            return true;
+
         let directions = [-17, -16, -15, -1, 1, 15, 16, 17];
         for (const direction of directions) {
             let cIndex = index + direction;
@@ -264,17 +294,17 @@ class Game{
     }
 
     isMovementValid(index) {
-        if (index < 0)
+        if (index < 0 || index > 119 || index % 16 > 7)
             return -1
         let tileStatus = this.checkTileStatus(index);
         let oldIndex = this.tileSelected;
         if (tileStatus == -1)   // Player's own piece occupies the space
             return -1
-        let tmpTile = this.tiles[index];
-        this.tiles[oldIndex].index = index;
-        this.tiles[index] = this.tiles[oldIndex];
+        let tmpTile = this.tiles[index];    // Store what's currently in the desired index
+        this.tiles[oldIndex].index = index;     // Update index on piece before move
+        this.tiles[index] = this.tiles[oldIndex];   // Move piece
         this.tiles[oldIndex] = null
-        let illegalMove = this.isKingInCheck();
+        let illegalMove = this.isKingInCheck(); // Check for illegal move
         this.tiles[oldIndex] = this.tiles[index];
         this.tiles[oldIndex].index = oldIndex;
         this.tiles[index] = tmpTile;
@@ -285,7 +315,7 @@ class Game{
     }
 
     getEnPassantMovements(index) {
-        if (this.tiles[this.lastMovement[1]].constructor.name == 'Pawn') {
+        if (this.tiles[this.lastMovement[1]].isPawn) {
             if (this.lastMovement[1] == (index - 16) || this.lastMovement[1] == (index + 16)) {
                 if (Math.abs(this.lastMovement[1] - this.lastMovement[0]) == 2)
                     return [{index: this.lastMovement[1] + this.tiles[index].direction, enPassant: true, killIndex: this.lastMovement[1]}]
@@ -337,34 +367,34 @@ class Game{
     }
 
     getAvailableMovements(index) {
-        if (this.tiles[index].constructor.name == 'Pawn')
+        if (this.tiles[index].isPawn)
             return this.getAvailablePawnMovements(index)
         else {
             let moves = [];
-            if (this.tiles[index].constructor.name == 'King')
+            if (this.tiles[index].isKing)
                 moves.push(...this.getAvailableKingMovements(index))    
             for (const move of this.tiles[index].movements) {
                 let newIndex = index + move;
-                if (this.checkTileStatus(newIndex) == 0) {
+                if (this.checkTileStatus(newIndex) == 0) {  // Checks if tile is empty - needed to handle branch involving checkmate logic
                     if (this.isMovementValid(newIndex) == 0)
                         moves.push({index: newIndex});
                     newIndex += move;
-                    if (this.tiles[index].extendedMovement) {
+                    if (this.tiles[index].extendedMovement) {   // Only needed currently to distinguish 'knight' pieces - Remove this
                         while (newIndex in this.tiles) {
-                            console.log(newIndex)
-                            if (this.isMovementValid(newIndex) == 0) {
+                            let validMove = this.isMovementValid(newIndex)
+                            if (validMove == 0) {
                                 moves.push({index: newIndex});
                                 newIndex += move;
                             }
-                            else if (this.isMovementValid(newIndex) == 1) {
+                            else if (validMove == 1) {
                                 moves.push({index: newIndex});
                                 newIndex = -1;
                             }
                             else {
-                                if (this.checkTileStatus(newIndex) == -1)
-                                    newIndex = -1;
-                                else
+                                if (this.checkTileStatus(newIndex) == 0)    // If tile is empty but movement is invalid i.e. player is in check
                                     newIndex += move;
+                                else
+                                    newIndex = -1;
                             }
                         }
                     }
@@ -383,20 +413,19 @@ class Game{
 
     click(index) {
         if (this.tileSelected == -1) {
-            if (this.tiles[index]) {
-                if (this.tiles[index].color == this.playerTurn)
-                    this.selectTileForMovement(index);
+            if (this.tiles[index] && (this.tiles[index].color == this.playerTurn)) {
+                this.selectTileForMovement(index);
             }
         }
         else {
-            let moveIndex = this.availableMoves.map((e) => {return e.index}).indexOf(index)
+            let moveIndex = this.availableMoves.map((e) => {return e.index}).indexOf(index) // Look for selected tile within 'available moves' 
             if (moveIndex != -1) {
                 this.executeMove(this.availableMoves[moveIndex])
                 this.playerTurn = (this.playerTurn + 1) % 2;
+                this.updateCheckStatus();
             }
             this.deselect();
         }
-        this.updateCheckStatus();
         this.drawBoard();
         this.drawPieces();
     }
@@ -429,8 +458,8 @@ class Game{
     drawBoard() {
         let tileWidth = this.width / 8;
         let ctx = this.canvas.getContext('2d');
-        ctx.clearRect(0, 0, this.width, this.width);
-        ctx.fillStyle = "#000000";
+        ctx.clearRect(0, 0, this.width, this.width);    // Clear the board (paints it white)
+        ctx.fillStyle = "#000000";  // black
         for (let x = 0; x < 8; x++) {
             for (let y = 0; y < 8; y++) {
                 if ((x + y) % 2 == 1) {     // Tile is black
@@ -440,11 +469,11 @@ class Game{
         }
 
         if (this.tileSelected != -1) {
-            ctx.fillStyle = "#fff000";
+            ctx.fillStyle = "#fff000";  // yellow
             let [x1, y1] = this.getCoordinatesFromIndex(this.tileSelected);
             ctx.fillRect(x1*this.tileWidth, y1*this.tileWidth, this.tileWidth, this.tileWidth);
             for (const index of this.availableMoves.map((e) => {return e.index})) {
-                ctx.fillStyle = "#20ff00";
+                ctx.fillStyle = "#20ff00";  // green
                 let [x2, y2] = this.getCoordinatesFromIndex(index);
                 ctx.fillRect(x2*this.tileWidth, y2*this.tileWidth, this.tileWidth, this.tileWidth);
             }
@@ -545,11 +574,12 @@ class Game{
         this.playerTurn = 0;
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
-                this.tiles[(i * 16) + j] = null
+                this.tiles[(i * 16) + j] = null;
             }
         }
         this.tileSelected = -1;
         this.lastMovement = [0, 0]
+        this.checkMate = false;
         this.playerInCheck = false;
         this.whiteKing;
         this.blackKing;

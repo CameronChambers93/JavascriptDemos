@@ -3,7 +3,7 @@
     class="flex flex-col absolute w-64 h-auto pin-r pin-b bg-grey-darkest text-white rounded mr-2 mb-2 z-10"
   >
     <div class="p-2 mt-1">
-      Controls
+      Controls - Press ESC for Menu
     </div>
     <div
       class="bg-grey-dark h-full p-3 rounded-b flex flex-col border border-grey-darkest"
@@ -17,19 +17,19 @@
             Size
           </p>
           <div>
-            <md-button @click="$emit('sizedecrease')">-</md-button>
+            <button @click="$emit('sizedecrease')">-</button>
             {{ size }}
-            <md-button @click="$emit('sizeincrease')">+</md-button>
+            <button @click="$emit('sizeincrease')">+</button>
           </div>
         </div>
-        <div>
+        <div class="flex">
           <p class="flex items-center justify-between mb-1">
             Units
           </p>
           <div>
-            <md-button @click="$emit('removeunit')">-</md-button>
+            <button @click="$emit('removeunit')">-</button>
             {{ units }}
-            <md-button @click="$emit('addunit')">+</md-button>
+            <button @click="$emit('addunit')">+</button>
           </div>
         </div>
         <p class="flex items-center justify-between">
@@ -91,6 +91,9 @@ export default {
       default: 20,
       type: Number
     }
+  },
+  created() {
+
   },
   data() {
     return {
